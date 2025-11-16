@@ -1709,8 +1709,9 @@ export class App extends PureComponent<Props, State> {
     if (pageScriptHash) {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
-      if (pageScriptHash != currentPageScriptHash) {
+      if (pageScriptHash != currentPageScriptHash && currentPageScriptHash !== "") {
         // clear non-embed query parameters within a page change
+        // Note: we preserve query params on initial load (when currentPageScriptHash is "")
         queryString = preserveEmbedQueryParams()
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
