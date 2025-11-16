@@ -45,6 +45,34 @@ function PageLink(props: Readonly<Props>): ReactElement {
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
+  // Construct the URL with query params if provided
+  const constructUrlWithParams = (
+    baseUrl: string,
+    queryParams?: { [key: string]: string }
+  ): string => {
+    if (!queryParams || Object.keys(queryParams).length === 0) {
+      return baseUrl
+    }
+
+    const url = new URL(baseUrl, window.location.origin)
+    Object.entries(queryParams).forEach(([key, value]) => {
+      url.searchParams.append(key, value)
+    })
+
+    // For relative URLs (internal pages), return just the pathname + search
+    if (!element.external) {
+      return url.pathname + url.search
+    }
+
+    // For external URLs, return the full URL
+    return url.toString()
+  }
+
+  const urlWithParams = constructUrlWithParams(
+    element.page,
+    element.queryParams
+  )
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     if (element.external) {
       // External Page Link
@@ -55,7 +83,13 @@ function PageLink(props: Readonly<Props>): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(element.pageScriptHash)
+        // If there are query params, navigate using window.location to preserve them
+        if (element.queryParams && Object.keys(element.queryParams).length > 0) {
+          window.location.href = urlWithParams
+        } else {
+          // No query params - use standard Streamlit navigation
+          onPageChange(element.pageScriptHash)
+        }
       }
     }
   }
@@ -72,7 +106,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            href={element.page}
+            href={urlWithParams}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"
             onClick={handleClick}

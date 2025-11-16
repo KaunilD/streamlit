@@ -210,4 +210,159 @@ describe("PageLink", () => {
     const tooltipContent = await screen.findByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("mockHelpText")
   })
+
+  describe("query params", () => {
+    it("appends query params to external URLs", () => {
+      const props = getProps({
+        page: "https://example.com",
+        external: true,
+        queryParams: { foo: "bar", baz: "qux" },
+      })
+      render(<PageLink {...props} />)
+
+      const pageLink = screen.getByTestId("stPageLink-NavLink")
+      const href = pageLink.getAttribute("href")
+
+      expect(href).toContain("https://example.com")
+      expect(href).toContain("foo=bar")
+      expect(href).toContain("baz=qux")
+    })
+
+    it("appends query params to internal page URLs", () => {
+      const props = getProps({
+        page: "/my_page",
+        external: false,
+        queryParams: { tab: "settings", id: "123" },
+      })
+      render(<PageLink {...props} />)
+
+      const pageLink = screen.getByTestId("stPageLink-NavLink")
+      const href = pageLink.getAttribute("href")
+
+      expect(href).toContain("/my_page")
+      expect(href).toContain("tab=settings")
+      expect(href).toContain("id=123")
+    })
+
+    it("handles empty query params object", () => {
+      const props = getProps({
+        page: "https://example.com",
+        external: true,
+        queryParams: {},
+      })
+      render(<PageLink {...props} />)
+
+      const pageLink = screen.getByTestId("stPageLink-NavLink")
+      const href = pageLink.getAttribute("href")
+
+      expect(href).toBe("https://example.com")
+      expect(href).not.toContain("?")
+    })
+
+    it("handles undefined query params", () => {
+      const props = getProps({
+        page: "https://example.com",
+        external: true,
+        queryParams: undefined,
+      })
+      render(<PageLink {...props} />)
+
+      const pageLink = screen.getByTestId("stPageLink-NavLink")
+      const href = pageLink.getAttribute("href")
+
+      expect(href).toBe("https://example.com")
+      expect(href).not.toContain("?")
+    })
+
+    it("properly URL-encodes special characters in query param values", () => {
+      const props = getProps({
+        page: "https://example.com",
+        external: true,
+        queryParams: { name: "John Doe", email: "test@example.com" },
+      })
+      render(<PageLink {...props} />)
+
+      const pageLink = screen.getByTestId("stPageLink-NavLink")
+      const href = pageLink.getAttribute("href")
+
+      // URL should have encoded the space and special characters
+      expect(href).toContain("name=")
+      expect(href).toContain("email=")
+      // Verify it's a valid URL
+      expect(() => new URL(href!)).not.toThrow()
+    })
+
+    it("handles multiple query params", () => {
+      const props = getProps({
+        page: "https://example.com",
+        external: true,
+        queryParams: {
+          param1: "value1",
+          param2: "value2",
+          param3: "value3",
+        },
+      })
+      render(<PageLink {...props} />)
+
+      const pageLink = screen.getByTestId("stPageLink-NavLink")
+      const href = pageLink.getAttribute("href")
+
+      expect(href).toContain("param1=value1")
+      expect(href).toContain("param2=value2")
+      expect(href).toContain("param3=value3")
+    })
+
+    it("uses window.location.href for internal navigation with query params", async () => {
+      const user = userEvent.setup()
+
+      // Store original window.location
+      const originalLocation = window.location
+      delete (window as any).location
+      window.location = { ...originalLocation, href: "" } as any
+
+      const props = getProps({
+        page: "/my_page",
+        external: false,
+        pageScriptHash: "page_hash",
+        queryParams: { tab: "settings" },
+      })
+
+      renderWithContexts(<PageLink {...props} />, {
+        onPageChange: mockOnPageChange,
+      })
+
+      const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+      await user.click(pageNavLink)
+
+      // Should navigate using window.location.href with query params
+      expect(window.location.href).toContain("/my_page")
+      expect(window.location.href).toContain("tab=settings")
+
+      // Should NOT call onPageChange when there are query params
+      expect(mockOnPageChange).not.toHaveBeenCalled()
+
+      // Restore window.location
+      window.location = originalLocation
+    })
+
+    it("uses onPageChange for internal navigation without query params", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        page: "/my_page",
+        external: false,
+        pageScriptHash: "page_hash",
+        queryParams: undefined,
+      })
+
+      renderWithContexts(<PageLink {...props} />, {
+        onPageChange: mockOnPageChange,
+      })
+
+      const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+      await user.click(pageNavLink)
+
+      // Should use onPageChange when no query params
+      expect(mockOnPageChange).toHaveBeenCalledWith("page_hash")
+    })
+  })
 })

@@ -739,6 +739,7 @@ class ButtonMixin:
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
+        query_params: dict[str, str] | None = None,
     ) -> DeltaGenerator:
         r"""Display a link to another page in a multipage app or to an external page.
 
@@ -829,6 +830,12 @@ class ButtonMixin:
               the parent container, the width of the button matches the width
               of the parent container.
 
+        query_params : dict or None
+            An optional dictionary of query parameters to append to the page URL.
+            The keys and values should be strings. For example,
+            ``query_params={"show": "true", "id": "123"}`` will append
+            ``?show=true&id=123`` to the URL.
+
         Example
         -------
         Consider the following example given this file structure:
@@ -873,6 +880,7 @@ class ButtonMixin:
             help=help,
             disabled=disabled,
             width=width,
+            query_params=query_params,
         )
 
     def _download_button(
@@ -1007,6 +1015,7 @@ class ButtonMixin:
         help: str | None = None,
         disabled: bool = False,
         width: Width = "content",
+        query_params: dict[str, str] | None = None,
     ) -> DeltaGenerator:
         page_link_proto = PageLinkProto()
         validate_width(width, allow_content=True)
@@ -1028,6 +1037,10 @@ class ButtonMixin:
 
         if help is not None:
             page_link_proto.help = dedent(help)
+
+        if query_params is not None:
+            for key, value in query_params.items():
+                page_link_proto.query_params[key] = str(value)
 
         if isinstance(page, StreamlitPage):
             page_link_proto.page_script_hash = page._script_hash
