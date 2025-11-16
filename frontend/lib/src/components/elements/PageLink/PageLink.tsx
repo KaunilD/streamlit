@@ -45,6 +45,19 @@ function PageLink(props: Readonly<Props>): ReactElement {
 
   const isCurrentPage = currentPageScriptHash === element.pageScriptHash
 
+  // Build URL with query params for external links
+  const getHref = (): string => {
+    if (!element.external || !element.queryParams || Object.keys(element.queryParams).length === 0) {
+      return element.page
+    }
+
+    const url = new URL(element.page)
+    Object.entries(element.queryParams).forEach(([key, value]) => {
+      url.searchParams.append(key, value)
+    })
+    return url.toString()
+  }
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
     if (element.external) {
       // External Page Link
@@ -55,7 +68,8 @@ function PageLink(props: Readonly<Props>): ReactElement {
       // MPA Page Link
       e.preventDefault()
       if (!disabled) {
-        onPageChange(element.pageScriptHash)
+        const hasQueryParams = element.queryParams && Object.keys(element.queryParams).length > 0
+        onPageChange(element.pageScriptHash, hasQueryParams ? element.queryParams : undefined)
       }
     }
   }
@@ -72,7 +86,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             data-testid="stPageLink-NavLink"
             disabled={disabled}
             isCurrentPage={isCurrentPage}
-            href={element.page}
+            href={getHref()}
             target={element.external ? "_blank" : ""}
             rel="noreferrer"
             onClick={handleClick}

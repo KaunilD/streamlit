@@ -191,3 +191,51 @@ class PageLinkTest(DeltaGeneratorTestCase):
             st.page_link(page="https://example.com", label="Test", icon="   ")
 
         assert 'The value "   " is not a valid emoji' in str(exc_info.value)
+
+    def test_query_params_with_external_page(self):
+        """Test that query_params are passed correctly for external pages."""
+        st.page_link(
+            page="https://example.com",
+            label="External",
+            query_params={"foo": "bar", "baz": "qux"},
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "External"
+        assert c.page == "https://example.com"
+        assert c.external
+        assert dict(c.query_params) == {"foo": "bar", "baz": "qux"}
+
+    @patch("pathlib.Path.is_file", MagicMock(return_value=True))
+    def test_query_params_with_internal_page(self):
+        """Test that query_params are passed correctly for internal pages."""
+        page = st.Page("foo.py", title="Internal Page")
+        st.page_link(page=page, query_params={"param1": "value1", "param2": "value2"})
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Internal Page"
+        assert c.page_script_hash == page._script_hash
+        assert not c.external
+        assert dict(c.query_params) == {"param1": "value1", "param2": "value2"}
+
+    def test_query_params_empty_dict(self):
+        """Test that empty query_params dict doesn't cause issues."""
+        st.page_link(
+            page="https://example.com", label="Test", query_params={}
+        )
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Test"
+        assert c.page == "https://example.com"
+        assert c.external
+        assert len(c.query_params) == 0
+
+    def test_query_params_none(self):
+        """Test that query_params=None works correctly."""
+        st.page_link(page="https://example.com", label="Test", query_params=None)
+
+        c = self.get_delta_from_queue().new_element.page_link
+        assert c.label == "Test"
+        assert c.page == "https://example.com"
+        assert c.external
+        assert len(c.query_params) == 0

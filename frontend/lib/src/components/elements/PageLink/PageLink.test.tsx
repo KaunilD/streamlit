@@ -96,7 +96,7 @@ describe("PageLink", () => {
 
     const pageNavLink = screen.getByTestId("stPageLink-NavLink")
     await user.click(pageNavLink)
-    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash")
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", undefined)
   })
 
   it("does not trigger onPageChange when disabled", async () => {
@@ -217,5 +217,70 @@ describe("PageLink", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipContent")
     expect(tooltipContent).toHaveTextContent("mockHelpText")
+  })
+
+  it("triggers onPageChange with query params for internal page", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      queryParams: { foo: "bar", baz: "qux" },
+    })
+
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
+    })
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    await user.click(pageNavLink)
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", {
+      foo: "bar",
+      baz: "qux",
+    })
+  })
+
+  it("appends query params to href for external pages", () => {
+    const props = getProps({
+      page: "https://example.com",
+      external: true,
+      queryParams: { param1: "value1", param2: "value2" },
+    })
+
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute(
+      "href",
+      "https://example.com/?param1=value1&param2=value2"
+    )
+  })
+
+  it("handles empty query params correctly", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      queryParams: {},
+    })
+
+    renderWithContexts(<PageLink {...props} />, {
+      navigationContext: {
+        onPageChange: mockOnPageChange,
+      },
+    })
+
+    const pageNavLink = screen.getByTestId("stPageLink-NavLink")
+    await user.click(pageNavLink)
+    expect(mockOnPageChange).toHaveBeenCalledWith("main_page_hash", undefined)
+  })
+
+  it("does not append query params when none provided for external page", () => {
+    const props = getProps({
+      page: "https://example.com",
+      external: true,
+    })
+
+    render(<PageLink {...props} />)
+
+    const pageLink = screen.getByTestId("stPageLink-NavLink")
+    expect(pageLink).toHaveAttribute("href", "https://example.com")
   })
 })

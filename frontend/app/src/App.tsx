@@ -1649,7 +1649,7 @@ export class App extends PureComponent<Props, State> {
     )
   }
 
-  onPageChange = (pageScriptHash: string): void => {
+  onPageChange = (pageScriptHash: string, queryParams?: Record<string, string>): void => {
     const { elements, mainScriptHash } = this.state
 
     // We are about to change the page, so clear all auto reruns
@@ -1673,7 +1673,9 @@ export class App extends PureComponent<Props, State> {
     this.sendRerunBackMsg(
       this.widgetMgr.getActiveWidgetStates(activeWidgetIds),
       undefined,
-      pageScriptHash
+      pageScriptHash,
+      false,
+      queryParams
     )
   }
 
@@ -1690,7 +1692,8 @@ export class App extends PureComponent<Props, State> {
     widgetStates?: WidgetStates,
     fragmentId?: string,
     pageScriptHash?: string,
-    isAutoRerun?: boolean
+    isAutoRerun?: boolean,
+    queryParams?: Record<string, string>
   ): void => {
     const baseUriParts = this.getBaseUriParts()
     if (!baseUriParts) {
@@ -1719,8 +1722,18 @@ export class App extends PureComponent<Props, State> {
       // The user specified exactly which page to run. We can simply use this
       // value in the BackMsg we send to the server.
       if (pageScriptHash != currentPageScriptHash) {
-        // clear non-embed query parameters within a page change
-        queryString = preserveEmbedQueryParams()
+        // If queryParams are provided, use them; otherwise, clear non-embed query parameters
+        if (queryParams && Object.keys(queryParams).length > 0) {
+          const embedParams = preserveEmbedQueryParams()
+          const newParams = new URLSearchParams(embedParams)
+          Object.entries(queryParams).forEach(([key, value]) => {
+            newParams.set(key, value)
+          })
+          queryString = newParams.toString()
+        } else {
+          // clear non-embed query parameters within a page change
+          queryString = preserveEmbedQueryParams()
+        }
         this.hostCommunicationMgr.sendMessageToHost({
           type: "SET_QUERY_PARAM",
           queryParams: queryString,
